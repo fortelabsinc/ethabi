@@ -21,10 +21,34 @@ pub struct Contract {
 
 impl<'a> From<&'a ethabi::Contract> for Contract {
 	fn from(c: &'a ethabi::Contract) -> Self {
+
+		let functions: Vec<Function> = c.functions
+			.iter()
+			.fold(
+				Vec::new(),
+				|mut functions, (method_name, fns)| {
+				if fns.len() == 1 {
+					functions.push(fns.get(0).unwrap().into());
+				} else {
+					let mut i = 0;
+					for func in fns {
+						let mut func: Function = func.into();
+						if i > 0 {
+							func.alias = format!("{}_{}", method_name, i);
+						} else {
+							func.alias = method_name.to_string();
+						}
+						functions.push(func);
+						i += 1;
+					}
+				}
+				functions
+			});
+
 		Contract {
 			constructor: c.constructor.as_ref().map(Into::into),
-			functions: c.functions().map(Into::into).collect(),
 			events: c.events().map(Into::into).collect(),
+			functions,
 		}
 	}
 }

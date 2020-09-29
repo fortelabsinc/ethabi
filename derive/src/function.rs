@@ -17,53 +17,55 @@ use super::{
 	to_ethabi_param_vec, to_token,
 };
 
-struct TemplateParam {
+pub struct TemplateParam {
 	/// Template param declaration.
 	///
 	/// ```text
 	/// [T0: Into<Uint>, T1: Into<Bytes>, T2: IntoIterator<Item = U2>, U2 = Into<Uint>]
 	/// ```
-	declaration: TokenStream,
+	pub declaration: TokenStream,
 	/// Template param definition.
 	///
 	/// ```text
 	/// [param0: T0, hello_world: T1, param2: T2]
 	/// ```
-	definition: TokenStream,
+	pub definition: TokenStream,
 }
 
-struct Inputs {
+pub struct Inputs {
 	/// Collects template params into vector.
 	///
 	/// ```text
 	/// [Token::Uint(param0.into()), Token::Bytes(hello_world.into()), Token::Array(param2.into_iter().map(Into::into).collect())]
 	/// ```
-	tokenize: Vec<TokenStream>,
+	pub tokenize: Vec<TokenStream>,
 	/// Template params.
-	template_params: Vec<TemplateParam>,
+	pub template_params: Vec<TemplateParam>,
 	/// Quote used to recreate `Vec<ethabi::Param>`
-	recreate_quote: TokenStream,
+	pub recreate_quote: TokenStream,
 }
 
-struct Outputs {
+pub struct Outputs {
 	/// Decoding implementation.
-	implementation: TokenStream,
+	pub implementation: TokenStream,
 	/// Decode result.
-	result: TokenStream,
+	pub result: TokenStream,
 	/// Quote used to recreate `Vec<ethabi::Param>`.
-	recreate_quote: TokenStream,
+	pub recreate_quote: TokenStream,
 }
 
 /// Structure used to generate contract's function interface.
 pub struct Function {
+	/// Function name alias.
+	pub alias: String,
 	/// Function name.
-	name: String,
+	pub name: String,
 	/// Function input params.
-	inputs: Inputs,
+	pub inputs: Inputs,
 	/// Function output params.
-	outputs: Outputs,
+	pub outputs: Outputs,
 	/// Constant function.
-	constant: bool,
+	pub constant: bool,
 }
 
 impl<'a> From<&'a ethabi::Function> for Function {
@@ -125,6 +127,7 @@ impl<'a> From<&'a ethabi::Function> for Function {
 		};
 
 		Function {
+			alias: f.name.clone(),
 			name: f.name.clone(),
 			inputs: Inputs { tokenize, template_params, recreate_quote: to_ethabi_param_vec(&f.inputs) },
 			outputs: Outputs {
@@ -141,7 +144,7 @@ impl Function {
 	/// Generates the interface for contract's function.
 	pub fn generate(&self) -> TokenStream {
 		let name = &self.name;
-		let module_name = syn::Ident::new(&self.name.to_snake_case(), Span::call_site());
+		let module_name = syn::Ident::new(&self.alias.to_snake_case(), Span::call_site());
 		let tokenize = &self.inputs.tokenize;
 		let declarations: &Vec<_> = &self.inputs.template_params.iter().map(|i| &i.declaration).collect();
 		let definitions: &Vec<_> = &self.inputs.template_params.iter().map(|i| &i.definition).collect();
